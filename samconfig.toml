@@ -1,0 +1,29 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "daily-report-dev"
+
+[default.deploy.parameters]
+region = "ap-northeast-2"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+fail_on_empty_changeset = false
+parameter_overrides = "Env=dev"
+
+[default.sync.parameters]
+region = "ap-northeast-2"
+resolve_s3 = true
+watch = true
+parameter_overrides = "Env=dev"
+
+[prod.global.parameters]
+stack_name = "daily-report-prod"
+
+[prod.deploy.parameters]
+region = "ap-northeast-2"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+fail_on_empty_changeset = false
+parameter_overrides = "Env=prod"

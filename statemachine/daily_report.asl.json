@@ -1,0 +1,219 @@
+{
+  "Comment": "MSP Daily Report - parallel collect, render, publish",
+  "StartAt": "Collect",
+  "States": {
+    "Collect": {
+      "Type": "Parallel",
+      "ResultPath": "$.sections",
+      "Branches": [
+        {
+          "StartAt": "Ec2Rds",
+          "States": {
+            "Ec2Rds": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${Ec2RdsArn}",
+                "Payload": {}
+              },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "Ec2RdsFailed"
+                }
+              ],
+              "End": true
+            },
+            "Ec2RdsFailed": {
+              "Type": "Pass",
+              "Result": {"section": "ec2_rds", "error": "collection failed"},
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "IamHygiene",
+          "States": {
+            "IamHygiene": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${IamHygieneArn}",
+                "Payload": {}
+              },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "IamHygieneFailed"
+                }
+              ],
+              "End": true
+            },
+            "IamHygieneFailed": {
+              "Type": "Pass",
+              "Result": {"section": "iam_hygiene", "error": "collection failed"},
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "CloudTrailRisk",
+          "States": {
+            "CloudTrailRisk": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${CloudTrailRiskArn}",
+                "Payload": {}
+              },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "CloudTrailRiskFailed"
+                }
+              ],
+              "End": true
+            },
+            "CloudTrailRiskFailed": {
+              "Type": "Pass",
+              "Result": {"section": "cloudtrail_risk", "error": "collection failed"},
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "S3Hygiene",
+          "States": {
+            "S3Hygiene": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${S3HygieneArn}",
+                "Payload": {}
+              },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "S3HygieneFailed"
+                }
+              ],
+              "End": true
+            },
+            "S3HygieneFailed": {
+              "Type": "Pass",
+              "Result": {"section": "s3_hygiene", "error": "collection failed"},
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "BackupStatus",
+          "States": {
+            "BackupStatus": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${BackupStatusArn}",
+                "Payload": {}
+              },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException", "States.TaskFailed"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2.0
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "BackupStatusFailed"
+                }
+              ],
+              "End": true
+            },
+            "BackupStatusFailed": {
+              "Type": "Pass",
+              "Result": {"section": "backup_status", "error": "collection failed"},
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Render"
+    },
+    "Render": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${RenderArn}",
+        "Payload": {
+          "sections.$": "$.sections"
+        }
+      },
+      "ResultSelector": {
+        "html.$": "$.Payload.html",
+        "json.$": "$.Payload.json",
+        "date.$": "$.Payload.date"
+      },
+      "ResultPath": "$.report",
+      "Next": "Publish"
+    },
+    "Publish": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${PublishArn}",
+        "Payload": {
+          "html.$": "$.report.html",
+          "json.$": "$.report.json",
+          "date.$": "$.report.date"
+        }
+      },
+      "OutputPath": "$.Payload",
+      "End": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+.aws-sam/
+__pycache__/
+*.pyc
+.env
+.env.*
+.venv/
+*.egg-info/
+samconfig.local.toml
+.python-version

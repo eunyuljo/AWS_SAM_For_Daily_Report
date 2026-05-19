@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AWS MSP Daily Report - Step Functions + Lambda
+
+Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, stg, prod]
+  PresignedUrlTtlSeconds:
+    Type: Number
+    Default: 604800
+    Description: presigned URL TTL (max 7 days = 604800)
+  MspName:
+    Type: String
+    Default: MegazoneCloud
+    Description: MSP brand displayed on the report header
+  CustomerName:
+    Type: String
+    Default: FNF
+    Description: Customer name displayed on the report
+  BrandColor:
+    Type: String
+    Default: '#1A1A1A'
+    Description: Primary brand color (hex) used for headers and badges
+  LogoUrl:
+    Type: String
+    Default: 'https://start.megazone.com/images/og-megazone-pops.png'
+    Description: URL of logo image displayed in the report header (leave blank to hide)
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 60
+    MemorySize: 256
+    Architectures: [arm64]
+    Tracing: Active
+    Environment:
+      Variables:
+        ENV: !Ref Env
+        LOG_LEVEL: INFO
+
+Resources:
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub daily-report-${AWS::AccountId}-${AWS::Region}-${Env}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-90d
+            Status: Enabled
+            ExpirationInDays: 90
+
+  Ec2RdsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-ec2rds-${Env}
+      CodeUri: src/functions/ec2_rds/
+      Handler: app.handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ec2:DescribeInstances
+                - ec2:DescribeVolumes
+                - ec2:DescribeAddresses
+                - rds:DescribeDBInstances
+              Resource: '*'
+
+  IamHygieneFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-iam-${Env}
+      CodeUri: src/functions/iam_hygiene/
+      Handler: app.handler
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - iam:GenerateCredentialReport
+                - iam:GetCredentialReport
+              Resource: '*'
+
+  CloudTrailRiskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-cloudtrail-${Env}
+      CodeUri: src/functions/cloudtrail_risk/
+      Handler: app.handler
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudtrail:LookupEvents
+              Resource: '*'
+
+  BackupStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-backup-${Env}
+      CodeUri: src/functions/backup_status/
+      Handler: app.handler
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - backup:ListBackupJobs
+                - backup:ListProtectedResources
+              Resource: '*'
+
+  S3HygieneFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-s3-${Env}
+      CodeUri: src/functions/s3_hygiene/
+      Handler: app.handler
+      Timeout: 120
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListAllMyBuckets
+                - s3:GetBucketPublicAccessBlock
+                - s3:GetEncryptionConfiguration
+              Resource: '*'
+
+  RenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-render-${Env}
+      CodeUri: src/functions/render/
+      Handler: app.handler
+      Environment:
+        Variables:
+          ACCOUNT_ID: !Ref AWS::AccountId
+          MSP_NAME: !Ref MspName
+          CUSTOMER_NAME: !Ref CustomerName
+          BRAND_COLOR: !Ref BrandColor
+          LOGO_URL: !Ref LogoUrl
+          REPORTS_BUCKET: !Ref ReportsBucket
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref ReportsBucket
+
+  PublishFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-publish-${Env}
+      CodeUri: src/functions/publish/
+      Handler: app.handler
+      Environment:
+        Variables:
+          REPORTS_BUCKET: !Ref ReportsBucket
+          PRESIGNED_URL_TTL: !Ref PresignedUrlTtlSeconds
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ReportsBucket
+
+  StateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/states/daily-report-${Env}
+      RetentionInDays: 14
+
+  DailyReportStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub daily-report-${Env}
+      Type: STANDARD
+      DefinitionUri: statemachine/daily_report.asl.json
+      DefinitionSubstitutions:
+        Ec2RdsArn: !GetAtt Ec2RdsFunction.Arn
+        IamHygieneArn: !GetAtt IamHygieneFunction.Arn
+        CloudTrailRiskArn: !GetAtt CloudTrailRiskFunction.Arn
+        S3HygieneArn: !GetAtt S3HygieneFunction.Arn
+        BackupStatusArn: !GetAtt BackupStatusFunction.Arn
+        RenderArn: !GetAtt RenderFunction.Arn
+        PublishArn: !GetAtt PublishFunction.Arn
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+      Tracing:
+        Enabled: true
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref Ec2RdsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref IamHygieneFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CloudTrailRiskFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref S3HygieneFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BackupStatusFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RenderFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref PublishFunction
+        - CloudWatchLogsFullAccess
+      Events:
+        DailySchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 9 * * ? *)
+            ScheduleExpressionTimezone: Asia/Seoul
+            Description: Run MSP daily report at 09:00 KST
+            State: ENABLED
+
+Outputs:
+  StateMachineArn:
+    Value: !Ref DailyReportStateMachine
+  ReportsBucketName:
+    Value: !Ref ReportsBucket
