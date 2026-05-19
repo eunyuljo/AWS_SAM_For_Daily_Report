@@ -62,6 +62,137 @@ def _load_history_metrics(days=7):
     return series
 
 
+def _bar_chart(title, items, value_suffix=""):
+    items = [(label, val) for label, val in items if val and val > 0]
+    if not items:
+        return ""
+    max_val = max(v for _, v in items) or 1
+    rows = "".join(
+        f'<li>'
+        f'<span class="bar-label">{_esc(label)}</span>'
+        f'<span class="bar-track"><span class="bar-fill" '
+        f'style="width:{(v / max_val) * 100:.1f}%"></span></span>'
+        f'<span class="bar-value">{v}{value_suffix}</span>'
+        f'</li>'
+        for label, v in items
+    )
+    return f"""
+    <div class="bar-chart">
+      <div class="bar-title">{_esc(title)}</div>
+      <ul class="bars">{rows}</ul>
+    </div>
+    """
+
+
+def _timeline_24h(events, time_key="time"):
+    if not events:
+        return ""
+    width, height = 720, 60
+    pad_l, pad_r, pad_t, pad_b = 32, 16, 16, 22
+    inner_w = width - pad_l - pad_r
+    base_y = height - pad_b
+    points = []
+    for ev in events:
+        ts = ev.get(time_key)
+        if not ts:
+            continue
+        try:
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        kst_hour = (dt.astimezone(timezone(timedelta(hours=9)))
+                    .hour
+                    + dt.astimezone(timezone(timedelta(hours=9))).minute / 60.0)
+        x = pad_l + (kst_hour / 24.0) * inner_w
+        points.append((x, ev))
+    if not points:
+        return ""
+
+    ticks = "".join(
+        f'<line x1="{pad_l + (h / 24.0) * inner_w:.1f}" x2="{pad_l + (h / 24.0) * inner_w:.1f}" '
+        f'y1="{base_y - 4}" y2="{base_y + 4}" stroke="#9AA1AD" stroke-width="1"/>'
+        f'<text x="{pad_l + (h / 24.0) * inner_w:.1f}" y="{base_y + 16}" '
+        f'text-anchor="middle" font-size="10" fill="#6B7280">{h:02d}</text>'
+        for h in range(0, 25, 4)
+    )
+
+    dots = "".join(
+        f'<circle cx="{x:.1f}" cy="{base_y - 12}" r="4" '
+        f'fill="#E60012" fill-opacity="0.75">'
+        f'<title>{_esc((ev.get(time_key) or "")[:19])} · {_esc(ev.get("event_name") or "")}'
+        f' ({_esc(ev.get("user") or "-")})</title>'
+        f'</circle>'
+        for x, ev in points
+    )
+
+    return f"""
+    <div class="timeline">
+      <div class="timeline-title">시간대별 분포 (KST)</div>
+      <svg viewBox="0 0 {width} {height}" role="img"
+           aria-label="24시간 위험 이벤트 타임라인">
+        <line x1="{pad_l}" x2="{width - pad_r}" y1="{base_y}" y2="{base_y}"
+              stroke="#D4D4DA" stroke-width="1"/>
+        {ticks}
+        {dots}
+      </svg>
+    </div>
+    """
+
+
+def _donut(title, items):
+    items = [(label, int(val), color) for label, val, color in items if val and val > 0]
+    if not items:
+        return f"""
+        <div class="donut-card">
+          <div class="donut-title">{_esc(title)}</div>
+          <p class="summary-note">데이터 없음</p>
+        </div>
+        """
+    total = sum(v for _, v, _ in items)
+    size, stroke = 120, 18
+    radius = (size - stroke) / 2
+    cx = cy = size / 2
+    circumference = 2 * 3.141592653589793 * radius
+    offset = 0.0
+    rings = []
+    for _, v, color in items:
+        portion = v / total
+        dash = circumference * portion
+        rings.append(
+            f'<circle cx="{cx}" cy="{cy}" r="{radius:.2f}" '
+            f'fill="none" stroke="{color}" stroke-width="{stroke}" '
+            f'stroke-dasharray="{dash:.2f} {circumference - dash:.2f}" '
+            f'stroke-dashoffset="{-offset:.2f}" '
+            f'transform="rotate(-90 {cx} {cy})"/>'
+        )
+        offset += dash
+
+    legend_rows = "".join(
+        f'<li><span class="legend-swatch" style="background:{color}"></span>'
+        f'<span class="legend-label">{_esc(label)}</span>'
+        f'<span class="legend-value">{v} ({v / total * 100:.0f}%)</span></li>'
+        for label, v, color in items
+    )
+
+    return f"""
+    <div class="donut-card">
+      <div class="donut-title">{_esc(title)}</div>
+      <div class="donut-body">
+        <svg class="donut" viewBox="0 0 {size} {size}" role="img"
+             aria-label="{_esc(title)} 분포">
+          <title>{_esc(title)} (총 {total})</title>
+          {''.join(rings)}
+          <text x="{cx}" y="{cy - 2}" text-anchor="middle"
+                font-size="20" font-weight="700" fill="#1F2430">{total}</text>
+          <text x="{cx}" y="{cy + 14}" text-anchor="middle"
+                font-size="10" fill="#6B7280">total</text>
+        </svg>
+        <ul class="legend">{legend_rows}</ul>
+      </div>
+    </div>
+    """
+
+
 def _sparkline(history, curr):
     if history is None:
         history = []
@@ -78,9 +209,11 @@ def _sparkline(history, curr):
         y = height - pad - ((v - lo) / span) * (height - 2 * pad)
         coords.append(f"{x:.1f},{y:.1f}")
     last_x, last_y = coords[-1].split(",")
+    series_label = " → ".join(str(p) for p in points)
     return (
         f'<svg class="spark" viewBox="0 0 {width} {height}" preserveAspectRatio="none" '
-        f'aria-hidden="true">'
+        f'role="img" aria-label="최근 7일 추이">'
+        f'<title>최근 7일 추이: {series_label}</title>'
         f'<polyline fill="none" stroke="currentColor" stroke-width="1.4" '
         f'points="{" ".join(coords)}"/>'
         f'<circle cx="{last_x}" cy="{last_y}" r="1.8" fill="currentColor"/>'
@@ -157,7 +290,51 @@ def _badge(level):
     return f'<span class="badge b-{level.lower()}">{level}</span>'
 
 
-def _section_summary(metrics, prev, history, root):
+EC2_STATE_COLORS = {
+    "running": "#16A34A",
+    "stopped": "#9AA1AD",
+    "pending": "#F59E0B",
+    "stopping": "#F59E0B",
+    "shutting-down": "#DC6803",
+    "terminated": "#1A1A1A",
+}
+
+BACKUP_STATE_COLORS = {
+    "COMPLETED": "#16A34A",
+    "RUNNING": "#1A1A1A",
+    "PENDING": "#9AA1AD",
+    "CREATED": "#9AA1AD",
+    "FAILED": "#E60012",
+    "ABORTED": "#DC6803",
+    "EXPIRED": "#B45309",
+    "PARTIAL": "#F59E0B",
+}
+
+
+def _ec2_donut(by_section):
+    by_state = (
+        by_section.get("ec2_rds", {}).get("ec2", {}).get("by_state", {}) or {}
+    )
+    items = [
+        (state, count, EC2_STATE_COLORS.get(state, "#9AA1AD"))
+        for state, count in sorted(by_state.items(), key=lambda x: -x[1])
+    ]
+    return _donut("EC2 상태 분포", items)
+
+
+def _backup_donut(by_section):
+    bk = by_section.get("backup_status", {})
+    if not bk.get("enabled", True):
+        return _donut("백업 작업 결과 (24h)", [])
+    by_state = bk.get("jobs", {}).get("by_state", {}) or {}
+    items = [
+        (state, count, BACKUP_STATE_COLORS.get(state, "#9AA1AD"))
+        for state, count in sorted(by_state.items(), key=lambda x: -x[1])
+    ]
+    return _donut("백업 작업 결과 (24h)", items)
+
+
+def _section_summary(metrics, prev, history, root, by_section):
     cards = [
         ("EC2 가동 중", metrics["ec2_running"], "ec2_running"),
         ("EC2 전체", metrics["ec2_total"], "ec2_total"),
@@ -186,9 +363,23 @@ def _section_summary(metrics, prev, history, root):
         if findings
         else "<li>특이사항 없음</li>"
     )
+    has_history = any((history or {}).values())
+    trend_note = (
+        '<p class="summary-note">최근 7일 추이</p>'
+        if has_history
+        else '<p class="summary-note">7일 추이 그래프는 데이터가 누적되면 표시됩니다.</p>'
+    )
+    donuts_html = f"""
+    <div class="donuts">
+      {_ec2_donut(by_section)}
+      {_backup_donut(by_section)}
+    </div>
+    """
     return f"""
     <h2>요약 (Summary)</h2>
+    {trend_note}
     <div class="cards">{cards_html}</div>
+    {donuts_html}
     <h3>주요 발견 사항 (Findings)</h3>
     <ul class="findings">{findings_html}</ul>
     """
@@ -222,6 +413,17 @@ def _section_ec2_rds(data):
         )
     waste_html = "".join(waste_rows) or "<tr><td colspan=4>없음</td></tr>"
 
+    top_volumes = sorted(
+        waste.get("unattached_volumes", []),
+        key=lambda v: v.get("size", 0),
+        reverse=True,
+    )[:5]
+    top_bars = _bar_chart(
+        "미사용 EBS 용량 TOP 5",
+        [(v["id"], v["size"]) for v in top_volumes],
+        value_suffix=" GB",
+    )
+
     return f"""
     <h2>EC2 / RDS 인벤토리</h2>
     <p class="summary-note">EC2 전체 <b>{ec2.get('total', 0)}</b>대 (상태별: {_esc(ec2.get('by_state', {}))}) &middot;
@@ -236,6 +438,7 @@ def _section_ec2_rds(data):
     <p class="summary-note">미연결 EBS <b>{len(waste.get('unattached_volumes', []))}개</b>
        ({waste.get('unattached_volume_size_gb', 0)} GB) &middot;
        미사용 EIP <b>{len(waste.get('unassociated_eips', []))}개</b></p>
+    {top_bars}
     <table><thead><tr><th>유형</th><th>리소스 ID / IP</th><th>상세</th><th class='num'>크기</th></tr></thead>
     <tbody>{waste_html}</tbody></table>
     """
@@ -256,7 +459,7 @@ def _section_iam(data):
     no_mfa_rows = "".join(f"<tr><td>{_esc(u)}</td></tr>" for u in no_mfa)
 
     stale_rows = "".join(
-        f"<tr><td>{_esc(k['user'])}</td><td class='num'>{k['key_index']}</td>"
+        f"<tr><td>{_esc(k['user'])}</td><td>액세스 키 #{k['key_index']}</td>"
         f"<td>{_esc(k['last_used'])}</td><td>{_esc(k['last_rotated'])}</td></tr>"
         for k in stale
     )
@@ -271,7 +474,7 @@ def _section_iam(data):
     <tbody>{no_mfa_rows or '<tr><td>없음</td></tr>'}</tbody></table>
     <h3>장기 미사용 액세스 키 ({data.get('stale_threshold_days', 90)}일 이상)</h3>
     <p class="summary-note">총 <b>{len(stale)}</b>건</p>
-    <table><thead><tr><th>사용자</th><th class='num'>키 번호</th><th>마지막 사용</th><th>마지막 회전</th></tr></thead>
+    <table><thead><tr><th>사용자</th><th>액세스 키</th><th>마지막 사용</th><th>마지막 회전</th></tr></thead>
     <tbody>{stale_rows or '<tr><td colspan=4>없음</td></tr>'}</tbody></table>
     """
 
@@ -282,9 +485,11 @@ def _section_cloudtrail(data):
         f"<td>{_esc(f['user'])}</td><td>{_esc(f['source'])}</td></tr>"
         for f in data.get("findings", [])
     )
+    timeline = _timeline_24h(data.get("findings", []))
     return f"""
     <h2>CloudTrail 위험 이벤트 (최근 {data.get('window_hours', 24)}시간)</h2>
     <p>총 건수: <b>{data.get('count', 0)}건</b></p>
+    {timeline}
     <table><thead><tr><th>시각</th><th>이벤트</th><th>사용자</th><th>서비스</th></tr></thead>
     <tbody>{rows or '<tr><td colspan=4>없음</td></tr>'}</tbody></table>
     """
@@ -341,6 +546,18 @@ def _section_backup(data):
         for t, count in sorted(protected_by_type.items(), key=lambda x: -x[1])
     )
 
+    protected_palette = [
+        "#1A1A1A", "#E60012", "#F59E0B", "#16A34A",
+        "#9AA1AD", "#6B7280", "#B45309", "#0F4FB3",
+    ]
+    protected_items = [
+        (t, count, protected_palette[i % len(protected_palette)])
+        for i, (t, count) in enumerate(
+            sorted(protected_by_type.items(), key=lambda x: -x[1])
+        )
+    ]
+    protected_donut = _donut("보호 리소스 종류 분포", protected_items)
+
     return f"""
     <h2>백업 상태 (AWS Backup, 최근 {data.get('window_hours', 24)}시간)</h2>
     <p class="summary-note">백업 작업 총 <b>{jobs.get('total', 0)}</b>건 &middot;
@@ -353,6 +570,7 @@ def _section_backup(data):
     <table><thead><tr><th>완료/생성</th><th>리소스 타입</th><th>리소스</th><th>볼트</th><th>상태</th><th>메시지</th></tr></thead>
     <tbody>{failed_rows or '<tr><td colspan=6>없음</td></tr>'}</tbody></table>
     <h3>보호 리소스 종류</h3>
+    <div class="donuts donuts-1">{protected_donut}</div>
     <table><thead><tr><th>리소스 타입</th><th class='num'>개수</th></tr></thead>
     <tbody>{type_rows or '<tr><td colspan=2>보호 리소스 없음</td></tr>'}</tbody></table>
     """
@@ -418,6 +636,40 @@ def _css():
     .card-value {{ font-size:24px; font-weight:700; color:var(--ink);
                    font-variant-numeric:tabular-nums; line-height:1.1; }}
     .spark {{ width:80px; height:24px; color:var(--muted); flex-shrink:0; }}
+    .donuts {{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+              margin:8px 0 16px; }}
+    .donut-card {{ background:#fff; border:1px solid var(--line); border-radius:6px;
+                  padding:14px 16px; }}
+    .donut-title {{ font-size:12px; color:var(--muted); text-transform:uppercase;
+                   letter-spacing:.3px; font-weight:600; margin-bottom:10px; }}
+    .donut-body {{ display:flex; align-items:center; gap:18px; }}
+    .donut {{ width:120px; height:120px; flex-shrink:0; }}
+    .legend {{ list-style:none; padding:0; margin:0; flex:1; font-size:13px; }}
+    .legend li {{ display:flex; align-items:center; gap:8px; padding:3px 0; }}
+    .legend-swatch {{ width:10px; height:10px; border-radius:2px; flex-shrink:0; }}
+    .legend-label {{ flex:1; color:var(--ink); }}
+    .legend-value {{ color:var(--muted); font-variant-numeric:tabular-nums; }}
+    .donuts-1 {{ grid-template-columns:1fr; }}
+    .bar-chart {{ background:#fff; border:1px solid var(--line); border-radius:6px;
+                 padding:14px 16px; margin:8px 0 16px; }}
+    .bar-title {{ font-size:12px; color:var(--muted); text-transform:uppercase;
+                 letter-spacing:.3px; font-weight:600; margin-bottom:10px; }}
+    .bars {{ list-style:none; padding:0; margin:0; }}
+    .bars li {{ display:grid; grid-template-columns:160px 1fr 80px;
+                align-items:center; gap:10px; padding:4px 0; font-size:13px; }}
+    .bar-label {{ color:var(--ink); white-space:nowrap; overflow:hidden;
+                 text-overflow:ellipsis; }}
+    .bar-track {{ background:var(--brand-100); height:14px; border-radius:3px;
+                 position:relative; }}
+    .bar-fill {{ background:var(--ink); height:100%; border-radius:3px;
+                display:block; }}
+    .bar-value {{ color:var(--muted); text-align:right;
+                 font-variant-numeric:tabular-nums; }}
+    .timeline {{ background:#fff; border:1px solid var(--line); border-radius:6px;
+                padding:14px 16px; margin:8px 0 16px; }}
+    .timeline-title {{ font-size:12px; color:var(--muted); text-transform:uppercase;
+                      letter-spacing:.3px; font-weight:600; margin-bottom:6px; }}
+    .timeline svg {{ width:100%; height:auto; }}
     .d-up {{ color:#B42318; font-size:13px; margin-left:6px; font-weight:500; }}
     .d-down {{ color:#067647; font-size:13px; margin-left:6px; font-weight:500; }}
     .d-zero {{ color:var(--muted); font-size:13px; margin-left:6px; }}
@@ -448,7 +700,7 @@ def handler(event, context):
     history = _load_history_metrics(days=7)
     root = by_section.get("iam_hygiene", {}).get("root", {})
 
-    body_parts = [_section_summary(metrics, prev, history, root)]
+    body_parts = [_section_summary(metrics, prev, history, root, by_section)]
     for s in sections:
         if not isinstance(s, dict):
             continue

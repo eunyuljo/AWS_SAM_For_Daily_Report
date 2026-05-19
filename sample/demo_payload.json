@@ -1,0 +1,104 @@
+{
+  "sections": [
+    {
+      "section": "ec2_rds",
+      "ec2": {
+        "total": 12,
+        "by_state": {"running": 8, "stopped": 3, "pending": 1},
+        "by_type": {"t3.medium": 4, "m5.large": 3, "c5.xlarge": 2, "t3.small": 3},
+        "instances": [
+          {"id": "i-0aaa1111", "name": "web-prod-01", "type": "t3.medium", "state": "running", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa1112", "name": "web-prod-02", "type": "t3.medium", "state": "running", "az": "ap-northeast-2c"},
+          {"id": "i-0aaa1113", "name": "api-prod-01", "type": "m5.large", "state": "running", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa1114", "name": "api-prod-02", "type": "m5.large", "state": "running", "az": "ap-northeast-2c"},
+          {"id": "i-0aaa1115", "name": "worker-01", "type": "c5.xlarge", "state": "running", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa1116", "name": "worker-02", "type": "c5.xlarge", "state": "stopped", "az": "ap-northeast-2c"},
+          {"id": "i-0aaa1117", "name": "bastion", "type": "t3.small", "state": "running", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa1118", "name": "monitoring", "type": "t3.small", "state": "running", "az": "ap-northeast-2c"},
+          {"id": "i-0aaa1119", "name": "old-batch", "type": "t3.small", "state": "stopped", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa111a", "name": "test-runner", "type": "m5.large", "state": "stopped", "az": "ap-northeast-2c"},
+          {"id": "i-0aaa111b", "name": "ml-training", "type": "t3.medium", "state": "running", "az": "ap-northeast-2a"},
+          {"id": "i-0aaa111c", "name": "ml-eval", "type": "t3.medium", "state": "pending", "az": "ap-northeast-2c"}
+        ]
+      },
+      "rds": {
+        "total": 3,
+        "instances": [
+          {"id": "fnf-prod-main", "engine": "aurora-mysql 8.0", "class": "db.r6g.large", "status": "available", "multi_az": true},
+          {"id": "fnf-prod-replica", "engine": "aurora-mysql 8.0", "class": "db.r6g.large", "status": "available", "multi_az": false},
+          {"id": "fnf-stg-db", "engine": "postgres 15.4", "class": "db.t4g.medium", "status": "available", "multi_az": false}
+        ]
+      },
+      "waste": {
+        "unattached_volumes": [
+          {"id": "vol-0a1b2c3d4e5f60001", "size": 500, "type": "gp3"},
+          {"id": "vol-0a1b2c3d4e5f60002", "size": 250, "type": "gp3"},
+          {"id": "vol-0a1b2c3d4e5f60003", "size": 180, "type": "gp2"},
+          {"id": "vol-0a1b2c3d4e5f60004", "size": 100, "type": "gp3"},
+          {"id": "vol-0a1b2c3d4e5f60005", "size": 60, "type": "gp2"},
+          {"id": "vol-0a1b2c3d4e5f60006", "size": 30, "type": "standard"}
+        ],
+        "unattached_volume_size_gb": 1120,
+        "unassociated_eips": ["52.78.123.1", "52.78.123.2", "52.78.123.3"]
+      }
+    },
+    {
+      "section": "iam_hygiene",
+      "root": {
+        "mfa_enabled": false,
+        "access_key_1_active": true,
+        "access_key_2_active": false,
+        "last_used": "2026-05-18T22:14:03+00:00"
+      },
+      "users_console_no_mfa": ["alice", "bob", "dave"],
+      "stale_access_keys": [
+        {"user": "deploy-bot", "key_index": 1, "last_used": "2025-09-12T11:00:00+00:00", "last_rotated": "2024-08-30T09:21:00+00:00"},
+        {"user": "ci-runner", "key_index": 2, "last_used": "2025-11-04T03:55:00+00:00", "last_rotated": "2024-12-15T07:40:00+00:00"},
+        {"user": "alice", "key_index": 1, "last_used": null, "last_rotated": "2024-04-21T14:00:00+00:00"},
+        {"user": "data-export", "key_index": 1, "last_used": "2025-08-20T18:00:00+00:00", "last_rotated": "2024-02-08T10:00:00+00:00"}
+      ],
+      "stale_threshold_days": 90
+    },
+    {
+      "section": "cloudtrail_risk",
+      "window_hours": 24,
+      "count": 8,
+      "findings": [
+        {"event_name": "ConsoleLogin", "time": "2026-05-18T18:50:00+00:00", "user": "Root", "source": "signin.amazonaws.com", "resources": []},
+        {"event_name": "AuthorizeSecurityGroupIngress", "time": "2026-05-18T13:14:00+00:00", "user": "eve", "source": "ec2.amazonaws.com", "resources": ["sg-0123456789"]},
+        {"event_name": "DeleteTrail", "time": "2026-05-18T10:22:00+00:00", "user": "dave", "source": "cloudtrail.amazonaws.com", "resources": ["main-trail"]},
+        {"event_name": "PutBucketPolicy", "time": "2026-05-18T05:47:00+00:00", "user": "carol", "source": "s3.amazonaws.com", "resources": ["fnf-data-warehouse"]},
+        {"event_name": "AttachUserPolicy", "time": "2026-05-18T01:05:00+00:00", "user": "bob", "source": "iam.amazonaws.com", "resources": ["bob"]},
+        {"event_name": "CreateAccessKey", "time": "2026-05-17T23:32:00+00:00", "user": "bob", "source": "iam.amazonaws.com", "resources": ["bob"]},
+        {"event_name": "AuthorizeSecurityGroupIngress", "time": "2026-05-17T19:18:00+00:00", "user": "alice", "source": "ec2.amazonaws.com", "resources": ["sg-0987654321"]},
+        {"event_name": "ConsoleLogin", "time": "2026-05-17T18:12:00+00:00", "user": "Root", "source": "signin.amazonaws.com", "resources": []}
+      ]
+    },
+    {
+      "section": "s3_hygiene",
+      "total_buckets": 14,
+      "without_public_access_block": ["legacy-static-site", "shared-uploads"],
+      "without_default_encryption": ["legacy-static-site", "fnf-temp-import"],
+      "inspect_errors": []
+    },
+    {
+      "section": "backup_status",
+      "enabled": true,
+      "window_hours": 24,
+      "jobs": {
+        "total": 14,
+        "by_state": {"COMPLETED": 11, "FAILED": 2, "RUNNING": 1},
+        "by_resource_type": {"EC2": 6, "RDS": 5, "EBS": 3},
+        "failed": [
+          {"job_id": "JOB-AAA-001", "state": "FAILED", "resource_arn": "arn:aws:ec2:ap-northeast-2:626635430480:instance/i-0aaa1116", "resource_type": "EC2", "vault": "Default", "created": "2026-05-18T15:00:00+00:00", "completed": "2026-05-18T15:23:00+00:00", "status_message": "Insufficient permissions on KMS key", "bytes": 0},
+          {"job_id": "JOB-AAA-002", "state": "FAILED", "resource_arn": "arn:aws:rds:ap-northeast-2:626635430480:db:fnf-stg-db", "resource_type": "RDS", "vault": "rds-vault", "created": "2026-05-18T18:00:00+00:00", "completed": "2026-05-18T18:11:00+00:00", "status_message": "Source DB was modifying during backup window", "bytes": 0}
+        ]
+      },
+      "protected": {
+        "total": 22,
+        "by_type": {"EC2": 10, "RDS": 5, "EBS": 4, "EFS": 2, "DynamoDB": 1},
+        "items": []
+      }
+    }
+  ]
+}

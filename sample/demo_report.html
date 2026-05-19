@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>MegazoneCloud AWS 일일 보고서 2026-05-19</title>
+<style>
+    :root {
+      --brand:      #1B69D6;
+      --brand-dark: #000000;
+      --brand-50:   #F7F7F8;
+      --brand-100:  #ECECEE;
+      --brand-200:  #D9D9DD;
+      --accent:     #E60012;
+      --ink:        #1A1A1A;
+      --muted:      #6B7280;
+      --line:       #E2E2E6;
+      --bg:         #F8F8F9;
+    }
+    body { font-family:-apple-system,Segoe UI,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+           max-width:1100px; margin:0 auto; color:var(--ink); background:var(--bg); }
+    .header { background:#fff; color:var(--ink); padding:20px 28px;
+              display:flex; align-items:center; justify-content:space-between;
+              border:1px solid var(--line); border-radius:6px;
+              margin:24px 28px 0; }
+    .header .brand { display:flex; align-items:center; gap:14px; }
+    .header .logo { height:40px; width:auto; }
+    .header .msp { font-size:12px; color:var(--muted); letter-spacing:.5px;
+                   text-transform:uppercase; font-weight:600; }
+    .header h1 { margin:4px 0 0; font-size:22px; color:var(--ink); }
+    .header .meta { text-align:right; font-size:13px; color:var(--muted); }
+    .header .meta b { color:var(--ink); }
+    .container { padding:24px 28px; }
+    h2 { margin-top:32px; color:var(--ink);
+          border-bottom:2px solid var(--ink); padding-bottom:6px; }
+    h3 { margin-top:20px; color:var(--ink); font-size:15px; }
+    table { border-collapse:separate; border-spacing:0; width:100%; margin:8px 0 16px;
+             font-size:13px; background:#fff; border:1px solid var(--line);
+             border-radius:6px; overflow:hidden; }
+    th,td { border-bottom:1px solid var(--line); padding:8px 12px; text-align:left;
+             vertical-align:top; }
+    th { background:var(--brand-100); color:var(--ink); font-weight:600;
+          font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+    tr:last-child td { border-bottom:0; }
+    tbody tr:hover { background:var(--brand-50); }
+    td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:8px 0 16px; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:6px;
+             padding:12px 14px; }
+    .card-label { font-size:12px; color:var(--muted); text-transform:uppercase;
+                   letter-spacing:.3px; font-weight:600; }
+    .card-row { display:flex; align-items:flex-end; justify-content:space-between;
+                gap:8px; margin-top:4px; }
+    .card-value { font-size:24px; font-weight:700; color:var(--ink);
+                   font-variant-numeric:tabular-nums; line-height:1.1; }
+    .spark { width:80px; height:24px; color:var(--muted); flex-shrink:0; }
+    .donuts { display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+              margin:8px 0 16px; }
+    .donut-card { background:#fff; border:1px solid var(--line); border-radius:6px;
+                  padding:14px 16px; }
+    .donut-title { font-size:12px; color:var(--muted); text-transform:uppercase;
+                   letter-spacing:.3px; font-weight:600; margin-bottom:10px; }
+    .donut-body { display:flex; align-items:center; gap:18px; }
+    .donut { width:120px; height:120px; flex-shrink:0; }
+    .legend { list-style:none; padding:0; margin:0; flex:1; font-size:13px; }
+    .legend li { display:flex; align-items:center; gap:8px; padding:3px 0; }
+    .legend-swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+    .legend-label { flex:1; color:var(--ink); }
+    .legend-value { color:var(--muted); font-variant-numeric:tabular-nums; }
+    .donuts-1 { grid-template-columns:1fr; }
+    .bar-chart { background:#fff; border:1px solid var(--line); border-radius:6px;
+                 padding:14px 16px; margin:8px 0 16px; }
+    .bar-title { font-size:12px; color:var(--muted); text-transform:uppercase;
+                 letter-spacing:.3px; font-weight:600; margin-bottom:10px; }
+    .bars { list-style:none; padding:0; margin:0; }
+    .bars li { display:grid; grid-template-columns:160px 1fr 80px;
+                align-items:center; gap:10px; padding:4px 0; font-size:13px; }
+    .bar-label { color:var(--ink); white-space:nowrap; overflow:hidden;
+                 text-overflow:ellipsis; }
+    .bar-track { background:var(--brand-100); height:14px; border-radius:3px;
+                 position:relative; }
+    .bar-fill { background:var(--ink); height:100%; border-radius:3px;
+                display:block; }
+    .bar-value { color:var(--muted); text-align:right;
+                 font-variant-numeric:tabular-nums; }
+    .timeline { background:#fff; border:1px solid var(--line); border-radius:6px;
+                padding:14px 16px; margin:8px 0 16px; }
+    .timeline-title { font-size:12px; color:var(--muted); text-transform:uppercase;
+                      letter-spacing:.3px; font-weight:600; margin-bottom:6px; }
+    .timeline svg { width:100%; height:auto; }
+    .d-up { color:#B42318; font-size:13px; margin-left:6px; font-weight:500; }
+    .d-down { color:#067647; font-size:13px; margin-left:6px; font-weight:500; }
+    .d-zero { color:var(--muted); font-size:13px; margin-left:6px; }
+    .findings { background:#fff; border:1px solid var(--line); border-radius:6px;
+                 list-style:none; padding:0; margin:8px 0 16px; overflow:hidden; }
+    .findings li { padding:9px 14px; border-bottom:1px solid var(--line); }
+    .findings li:last-child { border-bottom:0; }
+    p.summary-note { color:var(--muted); font-size:13px; margin:6px 2px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:4px;
+              font-size:11px; font-weight:600; margin-right:8px; color:#fff; }
+    .b-critical { background:var(--accent); }
+    .b-high     { background:#DC6803; }
+    .b-medium   { background:#B45309; }
+    .b-low      { background:#6B7280; }
+    p, ul, li { color:var(--ink); }
+    .footer { font-size:12px; color:var(--muted); padding:16px 28px;
+               border-top:1px solid var(--line); background:#fff; }
+    </style></head><body>
+<div class="header">
+  <div class="brand">
+    <img class="logo" src="https://start.megazone.com/images/og-megazone-pops.png" alt="MegazoneCloud"/>
+    <div>
+      <div class="msp">MegazoneCloud</div>
+      <h1>AWS 일일 보고서</h1>
+    </div>
+  </div>
+  <div class="meta">
+    <div>보고일자: 2026-05-19</div>
+    <div>계정: <b>626635430480</b> &middot; 고객사: <b>FNF</b></div>
+    <div>환경: <b>dev</b></div>
+  </div>
+</div>
+<div class="container">
+
+    <h2>요약 (Summary)</h2>
+    <p class="summary-note">최근 7일 추이</p>
+    <div class="cards"><div class="card"><div class="card-label">EC2 가동 중</div><div class="card-row"><div class="card-value">8 <span class="d-up">+8</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 0 → 0 → 0 → 0 → 0 → 0 → 8</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,22.0 27.3,22.0 40.0,22.0 52.7,22.0 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">EC2 전체</div><div class="card-row"><div class="card-value">12 <span class="d-up">+11</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 1 → 3 → 2 → 1 → 2 → 1 → 12</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,18.4 27.3,20.2 40.0,22.0 52.7,20.2 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">RDS 인스턴스</div><div class="card-row"><div class="card-value">3 <span class="d-up">+3</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 0 → 0 → 0 → 0 → 0 → 0 → 3</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,22.0 27.3,22.0 40.0,22.0 52.7,22.0 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">위험 이벤트 (24h)</div><div class="card-row"><div class="card-value">8 <span class="d-up">+8</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 2 → 1 → 0 → 2 → 1 → 0 → 8</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,17.0 14.7,19.5 27.3,22.0 40.0,17.0 52.7,19.5 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">MFA 미설정 사용자</div><div class="card-row"><div class="card-value">3 <span class="d-down">-2</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 2 → 5 → 2 → 5 → 6 → 5 → 3</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,7.0 27.3,22.0 40.0,7.0 52.7,2.0 65.3,7.0 78.0,17.0"/><circle cx="78.0" cy="17.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">장기 미사용 키</div><div class="card-row"><div class="card-value">4 <span class="d-down">-7</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 11 → 4 → 4 → 7 → 2 → 11 → 4</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,2.0 14.7,17.6 27.3,17.6 40.0,10.9 52.7,22.0 65.3,2.0 78.0,17.6"/><circle cx="78.0" cy="17.6" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">퍼블릭 차단 미설정 버킷</div><div class="card-row"><div class="card-value">2 <span class="d-down">-3</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 4 → 10 → 4 → 5 → 8 → 5 → 2</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,17.0 14.7,2.0 27.3,17.0 40.0,14.5 52.7,7.0 65.3,14.5 78.0,22.0"/><circle cx="78.0" cy="22.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">미연결 EBS 볼륨</div><div class="card-row"><div class="card-value">6 <span class="d-up">+6</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 0 → 0 → 0 → 0 → 0 → 0 → 6</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,22.0 27.3,22.0 40.0,22.0 52.7,22.0 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">백업 실패 (24h)</div><div class="card-row"><div class="card-value">2 <span class="d-up">+2</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 0 → 0 → 0 → 0 → 0 → 0 → 2</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,22.0 27.3,22.0 40.0,22.0 52.7,22.0 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div><div class="card"><div class="card-label">보호 리소스</div><div class="card-row"><div class="card-value">22 <span class="d-up">+22</span></div><svg class="spark" viewBox="0 0 80 24" preserveAspectRatio="none" role="img" aria-label="최근 7일 추이"><title>최근 7일 추이: 0 → 0 → 0 → 1 → 0 → 0 → 22</title><polyline fill="none" stroke="currentColor" stroke-width="1.4" points="2.0,22.0 14.7,22.0 27.3,22.0 40.0,21.1 52.7,22.0 65.3,22.0 78.0,2.0"/><circle cx="78.0" cy="2.0" r="1.8" fill="currentColor"/></svg></div></div></div>
+    
+    <div class="donuts">
+      
+    <div class="donut-card">
+      <div class="donut-title">EC2 상태 분포</div>
+      <div class="donut-body">
+        <svg class="donut" viewBox="0 0 120 120" role="img"
+             aria-label="EC2 상태 분포 분포">
+          <title>EC2 상태 분포 (총 12)</title>
+          <circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#16A34A" stroke-width="18" stroke-dasharray="213.63 106.81" stroke-dashoffset="-0.00" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#9AA1AD" stroke-width="18" stroke-dasharray="80.11 240.33" stroke-dashoffset="-213.63" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#F59E0B" stroke-width="18" stroke-dasharray="26.70 293.74" stroke-dashoffset="-293.74" transform="rotate(-90 60.0 60.0)"/>
+          <text x="60.0" y="58.0" text-anchor="middle"
+                font-size="20" font-weight="700" fill="#1F2430">12</text>
+          <text x="60.0" y="74.0" text-anchor="middle"
+                font-size="10" fill="#6B7280">total</text>
+        </svg>
+        <ul class="legend"><li><span class="legend-swatch" style="background:#16A34A"></span><span class="legend-label">running</span><span class="legend-value">8 (67%)</span></li><li><span class="legend-swatch" style="background:#9AA1AD"></span><span class="legend-label">stopped</span><span class="legend-value">3 (25%)</span></li><li><span class="legend-swatch" style="background:#F59E0B"></span><span class="legend-label">pending</span><span class="legend-value">1 (8%)</span></li></ul>
+      </div>
+    </div>
+    
+      
+    <div class="donut-card">
+      <div class="donut-title">백업 작업 결과 (24h)</div>
+      <div class="donut-body">
+        <svg class="donut" viewBox="0 0 120 120" role="img"
+             aria-label="백업 작업 결과 (24h) 분포">
+          <title>백업 작업 결과 (24h) (총 14)</title>
+          <circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#16A34A" stroke-width="18" stroke-dasharray="251.78 68.67" stroke-dashoffset="-0.00" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#E60012" stroke-width="18" stroke-dasharray="45.78 274.66" stroke-dashoffset="-251.78" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#1A1A1A" stroke-width="18" stroke-dasharray="22.89 297.55" stroke-dashoffset="-297.55" transform="rotate(-90 60.0 60.0)"/>
+          <text x="60.0" y="58.0" text-anchor="middle"
+                font-size="20" font-weight="700" fill="#1F2430">14</text>
+          <text x="60.0" y="74.0" text-anchor="middle"
+                font-size="10" fill="#6B7280">total</text>
+        </svg>
+        <ul class="legend"><li><span class="legend-swatch" style="background:#16A34A"></span><span class="legend-label">COMPLETED</span><span class="legend-value">11 (79%)</span></li><li><span class="legend-swatch" style="background:#E60012"></span><span class="legend-label">FAILED</span><span class="legend-value">2 (14%)</span></li><li><span class="legend-swatch" style="background:#1A1A1A"></span><span class="legend-label">RUNNING</span><span class="legend-value">1 (7%)</span></li></ul>
+      </div>
+    </div>
+    
+    </div>
+    
+    <h3>주요 발견 사항 (Findings)</h3>
+    <ul class="findings"><li><span class="badge b-critical">CRITICAL</span> 루트 계정 액세스 키가 활성화되어 있음</li><li><span class="badge b-critical">CRITICAL</span> 루트 계정 MFA가 비활성 상태</li><li><span class="badge b-high">HIGH</span> 최근 24시간 위험 이벤트 8건</li><li><span class="badge b-high">HIGH</span> MFA 미설정 콘솔 사용자 3명</li><li><span class="badge b-high">HIGH</span> 퍼블릭 액세스 차단이 안 된 S3 버킷 2개</li><li><span class="badge b-medium">MEDIUM</span> 장기 미사용 액세스 키 4개</li><li><span class="badge b-medium">MEDIUM</span> 기본 암호화 미설정 S3 버킷 2개</li><li><span class="badge b-low">LOW</span> 미연결 EBS 볼륨 6개</li><li><span class="badge b-low">LOW</span> 미사용 EIP 3개</li><li><span class="badge b-high">HIGH</span> 최근 24시간 백업 실패 2건</li></ul>
+    
+    <h2>EC2 / RDS 인벤토리</h2>
+    <p class="summary-note">EC2 전체 <b>12</b>대 (상태별: {&#x27;running&#x27;: 8, &#x27;stopped&#x27;: 3, &#x27;pending&#x27;: 1}) &middot;
+       RDS 전체 <b>3</b>대</p>
+    <h3>EC2 인스턴스</h3>
+    <table><thead><tr><th>ID</th><th>이름</th><th>타입</th><th>상태</th><th>가용영역</th></tr></thead>
+    <tbody><tr><td>i-0aaa1111</td><td>web-prod-01</td><td>t3.medium</td><td>running</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa1112</td><td>web-prod-02</td><td>t3.medium</td><td>running</td><td>ap-northeast-2c</td></tr><tr><td>i-0aaa1113</td><td>api-prod-01</td><td>m5.large</td><td>running</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa1114</td><td>api-prod-02</td><td>m5.large</td><td>running</td><td>ap-northeast-2c</td></tr><tr><td>i-0aaa1115</td><td>worker-01</td><td>c5.xlarge</td><td>running</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa1116</td><td>worker-02</td><td>c5.xlarge</td><td>stopped</td><td>ap-northeast-2c</td></tr><tr><td>i-0aaa1117</td><td>bastion</td><td>t3.small</td><td>running</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa1118</td><td>monitoring</td><td>t3.small</td><td>running</td><td>ap-northeast-2c</td></tr><tr><td>i-0aaa1119</td><td>old-batch</td><td>t3.small</td><td>stopped</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa111a</td><td>test-runner</td><td>m5.large</td><td>stopped</td><td>ap-northeast-2c</td></tr><tr><td>i-0aaa111b</td><td>ml-training</td><td>t3.medium</td><td>running</td><td>ap-northeast-2a</td></tr><tr><td>i-0aaa111c</td><td>ml-eval</td><td>t3.medium</td><td>pending</td><td>ap-northeast-2c</td></tr></tbody></table>
+    <h3>RDS 인스턴스</h3>
+    <table><thead><tr><th>ID</th><th>엔진</th><th>클래스</th><th>상태</th><th>MultiAZ</th></tr></thead>
+    <tbody><tr><td>fnf-prod-main</td><td>aurora-mysql 8.0</td><td>db.r6g.large</td><td>available</td><td>True</td></tr><tr><td>fnf-prod-replica</td><td>aurora-mysql 8.0</td><td>db.r6g.large</td><td>available</td><td>False</td></tr><tr><td>fnf-stg-db</td><td>postgres 15.4</td><td>db.t4g.medium</td><td>available</td><td>False</td></tr></tbody></table>
+    <h3>유휴/낭비 리소스</h3>
+    <p class="summary-note">미연결 EBS <b>6개</b>
+       (1120 GB) &middot;
+       미사용 EIP <b>3개</b></p>
+    
+    <div class="bar-chart">
+      <div class="bar-title">미사용 EBS 용량 TOP 5</div>
+      <ul class="bars"><li><span class="bar-label">vol-0a1b2c3d4e5f60001</span><span class="bar-track"><span class="bar-fill" style="width:100.0%"></span></span><span class="bar-value">500 GB</span></li><li><span class="bar-label">vol-0a1b2c3d4e5f60002</span><span class="bar-track"><span class="bar-fill" style="width:50.0%"></span></span><span class="bar-value">250 GB</span></li><li><span class="bar-label">vol-0a1b2c3d4e5f60003</span><span class="bar-track"><span class="bar-fill" style="width:36.0%"></span></span><span class="bar-value">180 GB</span></li><li><span class="bar-label">vol-0a1b2c3d4e5f60004</span><span class="bar-track"><span class="bar-fill" style="width:20.0%"></span></span><span class="bar-value">100 GB</span></li><li><span class="bar-label">vol-0a1b2c3d4e5f60005</span><span class="bar-track"><span class="bar-fill" style="width:12.0%"></span></span><span class="bar-value">60 GB</span></li></ul>
+    </div>
+    
+    <table><thead><tr><th>유형</th><th>리소스 ID / IP</th><th>상세</th><th class='num'>크기</th></tr></thead>
+    <tbody><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60001</td><td>gp3</td><td class='num'>500 GB</td></tr><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60002</td><td>gp3</td><td class='num'>250 GB</td></tr><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60003</td><td>gp2</td><td class='num'>180 GB</td></tr><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60004</td><td>gp3</td><td class='num'>100 GB</td></tr><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60005</td><td>gp2</td><td class='num'>60 GB</td></tr><tr><td>미연결 EBS 볼륨</td><td>vol-0a1b2c3d4e5f60006</td><td>standard</td><td class='num'>30 GB</td></tr><tr><td>미사용 EIP</td><td>52.78.123.1</td><td>-</td><td>-</td></tr><tr><td>미사용 EIP</td><td>52.78.123.2</td><td>-</td><td>-</td></tr><tr><td>미사용 EIP</td><td>52.78.123.3</td><td>-</td><td>-</td></tr></tbody></table>
+    
+    <h2>IAM 보안 점검</h2>
+    <h3>루트 계정</h3>
+    <table><thead><tr><th>항목</th><th>상태</th></tr></thead>
+    <tbody><tr><td>MFA 활성화</td><td>False</td></tr><tr><td>액세스 키 1 활성</td><td>True</td></tr><tr><td>액세스 키 2 활성</td><td>False</td></tr><tr><td>마지막 사용 시각</td><td>2026-05-18T22:14:03+00:00</td></tr></tbody></table>
+    <h3>MFA 미설정 사용자 (콘솔 로그인 가능)</h3>
+    <p class="summary-note">총 <b>3</b>명</p>
+    <table><thead><tr><th>사용자</th></tr></thead>
+    <tbody><tr><td>alice</td></tr><tr><td>bob</td></tr><tr><td>dave</td></tr></tbody></table>
+    <h3>장기 미사용 액세스 키 (90일 이상)</h3>
+    <p class="summary-note">총 <b>4</b>건</p>
+    <table><thead><tr><th>사용자</th><th>액세스 키</th><th>마지막 사용</th><th>마지막 회전</th></tr></thead>
+    <tbody><tr><td>deploy-bot</td><td>액세스 키 #1</td><td>2025-09-12T11:00:00+00:00</td><td>2024-08-30T09:21:00+00:00</td></tr><tr><td>ci-runner</td><td>액세스 키 #2</td><td>2025-11-04T03:55:00+00:00</td><td>2024-12-15T07:40:00+00:00</td></tr><tr><td>alice</td><td>액세스 키 #1</td><td>None</td><td>2024-04-21T14:00:00+00:00</td></tr><tr><td>data-export</td><td>액세스 키 #1</td><td>2025-08-20T18:00:00+00:00</td><td>2024-02-08T10:00:00+00:00</td></tr></tbody></table>
+    
+    <h2>CloudTrail 위험 이벤트 (최근 24시간)</h2>
+    <p>총 건수: <b>8건</b></p>
+    
+    <div class="timeline">
+      <div class="timeline-title">시간대별 분포 (KST)</div>
+      <svg viewBox="0 0 720 60" role="img"
+           aria-label="24시간 위험 이벤트 타임라인">
+        <line x1="32" x2="704" y1="38" y2="38"
+              stroke="#D4D4DA" stroke-width="1"/>
+        <line x1="32.0" x2="32.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="32.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">00</text><line x1="144.0" x2="144.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="144.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">04</text><line x1="256.0" x2="256.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="256.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">08</text><line x1="368.0" x2="368.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="368.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">12</text><line x1="480.0" x2="480.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="480.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">16</text><line x1="592.0" x2="592.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="592.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">20</text><line x1="704.0" x2="704.0" y1="34" y2="42" stroke="#9AA1AD" stroke-width="1"/><text x="704.0" y="54" text-anchor="middle" font-size="10" fill="#6B7280">24</text>
+        <circle cx="139.3" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-18T18:50:00 · ConsoleLogin (Root)</title></circle><circle cx="654.5" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-18T13:14:00 · AuthorizeSecurityGroupIngress (eve)</title></circle><circle cx="574.3" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-18T10:22:00 · DeleteTrail (dave)</title></circle><circle cx="445.9" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-18T05:47:00 · PutBucketPolicy (carol)</title></circle><circle cx="314.3" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-18T01:05:00 · AttachUserPolicy (bob)</title></circle><circle cx="270.9" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-17T23:32:00 · CreateAccessKey (bob)</title></circle><circle cx="152.4" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-17T19:18:00 · AuthorizeSecurityGroupIngress (alice)</title></circle><circle cx="121.6" cy="26" r="4" fill="#E60012" fill-opacity="0.75"><title>2026-05-17T18:12:00 · ConsoleLogin (Root)</title></circle>
+      </svg>
+    </div>
+    
+    <table><thead><tr><th>시각</th><th>이벤트</th><th>사용자</th><th>서비스</th></tr></thead>
+    <tbody><tr><td>2026-05-18T18:50:00+00:00</td><td>ConsoleLogin</td><td>Root</td><td>signin.amazonaws.com</td></tr><tr><td>2026-05-18T13:14:00+00:00</td><td>AuthorizeSecurityGroupIngress</td><td>eve</td><td>ec2.amazonaws.com</td></tr><tr><td>2026-05-18T10:22:00+00:00</td><td>DeleteTrail</td><td>dave</td><td>cloudtrail.amazonaws.com</td></tr><tr><td>2026-05-18T05:47:00+00:00</td><td>PutBucketPolicy</td><td>carol</td><td>s3.amazonaws.com</td></tr><tr><td>2026-05-18T01:05:00+00:00</td><td>AttachUserPolicy</td><td>bob</td><td>iam.amazonaws.com</td></tr><tr><td>2026-05-17T23:32:00+00:00</td><td>CreateAccessKey</td><td>bob</td><td>iam.amazonaws.com</td></tr><tr><td>2026-05-17T19:18:00+00:00</td><td>AuthorizeSecurityGroupIngress</td><td>alice</td><td>ec2.amazonaws.com</td></tr><tr><td>2026-05-17T18:12:00+00:00</td><td>ConsoleLogin</td><td>Root</td><td>signin.amazonaws.com</td></tr></tbody></table>
+    
+    <h2>S3 버킷 보안 점검</h2>
+    <p class="summary-note">전체 버킷 <b>14</b>개 &middot;
+       퍼블릭 차단 미설정 <b>2</b>개 &middot;
+       암호화 미설정 <b>2</b>개</p>
+    <table><thead><tr><th>버킷</th><th>위반 항목</th></tr></thead>
+    <tbody><tr><td>legacy-static-site</td><td>퍼블릭 액세스 차단 미설정</td></tr><tr><td>shared-uploads</td><td>퍼블릭 액세스 차단 미설정</td></tr><tr><td>legacy-static-site</td><td>기본 암호화 미설정</td></tr><tr><td>fnf-temp-import</td><td>기본 암호화 미설정</td></tr></tbody></table>
+    
+    <h2>백업 상태 (AWS Backup, 최근 24시간)</h2>
+    <p class="summary-note">백업 작업 총 <b>14</b>건 &middot;
+       보호 리소스 <b>22</b>개 &middot;
+       리소스 종류 {&#x27;EC2&#x27;: 6, &#x27;RDS&#x27;: 5, &#x27;EBS&#x27;: 3}</p>
+    <h3>작업 상태별 카운트</h3>
+    <table><thead><tr><th>상태</th><th class='num'>건수</th></tr></thead>
+    <tbody><tr><td>COMPLETED</td><td class='num'>11</td></tr><tr><td>FAILED</td><td class='num'>2</td></tr><tr><td>RUNNING</td><td class='num'>1</td></tr></tbody></table>
+    <h3>실패/중단 작업</h3>
+    <table><thead><tr><th>완료/생성</th><th>리소스 타입</th><th>리소스</th><th>볼트</th><th>상태</th><th>메시지</th></tr></thead>
+    <tbody><tr><td>2026-05-18T15:23:00</td><td>EC2</td><td>instance/i-0aaa1116</td><td>Default</td><td>FAILED</td><td>Insufficient permissions on KMS key</td></tr><tr><td>2026-05-18T18:11:00</td><td>RDS</td><td>fnf-stg-db</td><td>rds-vault</td><td>FAILED</td><td>Source DB was modifying during backup window</td></tr></tbody></table>
+    <h3>보호 리소스 종류</h3>
+    <div class="donuts donuts-1">
+    <div class="donut-card">
+      <div class="donut-title">보호 리소스 종류 분포</div>
+      <div class="donut-body">
+        <svg class="donut" viewBox="0 0 120 120" role="img"
+             aria-label="보호 리소스 종류 분포 분포">
+          <title>보호 리소스 종류 분포 (총 22)</title>
+          <circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#1A1A1A" stroke-width="18" stroke-dasharray="145.66 174.79" stroke-dashoffset="-0.00" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#E60012" stroke-width="18" stroke-dasharray="72.83 247.61" stroke-dashoffset="-145.66" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#F59E0B" stroke-width="18" stroke-dasharray="58.26 262.18" stroke-dashoffset="-218.48" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#16A34A" stroke-width="18" stroke-dasharray="29.13 291.31" stroke-dashoffset="-276.75" transform="rotate(-90 60.0 60.0)"/><circle cx="60.0" cy="60.0" r="51.00" fill="none" stroke="#9AA1AD" stroke-width="18" stroke-dasharray="14.57 305.88" stroke-dashoffset="-305.88" transform="rotate(-90 60.0 60.0)"/>
+          <text x="60.0" y="58.0" text-anchor="middle"
+                font-size="20" font-weight="700" fill="#1F2430">22</text>
+          <text x="60.0" y="74.0" text-anchor="middle"
+                font-size="10" fill="#6B7280">total</text>
+        </svg>
+        <ul class="legend"><li><span class="legend-swatch" style="background:#1A1A1A"></span><span class="legend-label">EC2</span><span class="legend-value">10 (45%)</span></li><li><span class="legend-swatch" style="background:#E60012"></span><span class="legend-label">RDS</span><span class="legend-value">5 (23%)</span></li><li><span class="legend-swatch" style="background:#F59E0B"></span><span class="legend-label">EBS</span><span class="legend-value">4 (18%)</span></li><li><span class="legend-swatch" style="background:#16A34A"></span><span class="legend-label">EFS</span><span class="legend-value">2 (9%)</span></li><li><span class="legend-swatch" style="background:#9AA1AD"></span><span class="legend-label">DynamoDB</span><span class="legend-value">1 (5%)</span></li></ul>
+      </div>
+    </div>
+    </div>
+    <table><thead><tr><th>리소스 타입</th><th class='num'>개수</th></tr></thead>
+    <tbody><tr><td>EC2</td><td class='num'>10</td></tr><tr><td>RDS</td><td class='num'>5</td></tr><tr><td>EBS</td><td class='num'>4</td></tr><tr><td>EFS</td><td class='num'>2</td></tr><tr><td>DynamoDB</td><td class='num'>1</td></tr></tbody></table>
+    
+</div>
+<div class="footer">MegazoneCloud AWS 일일 보고서 &middot; 본 보고서의 공유 URL은 설정된 만료 기간(기본 7일) 후 사용 불가 합니다.</div>
+</body></html>
