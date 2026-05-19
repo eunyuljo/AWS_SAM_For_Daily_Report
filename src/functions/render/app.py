@@ -23,6 +23,63 @@ def _esc(value):
     return html.escape(str(value), quote=True)
 
 
+def _md_to_html(md):
+    if not md:
+        return ""
+    import re
+
+    lines = md.strip().split("\n")
+    out = []
+    in_list = False
+    for raw in lines:
+        line = raw.rstrip()
+        if not line.strip():
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            continue
+        if line.startswith("## "):
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            out.append(f"<h3>{_esc(line[3:].strip())}</h3>")
+        elif line.startswith("### "):
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            out.append(f"<h4>{_esc(line[4:].strip())}</h4>")
+        elif line.lstrip().startswith("- "):
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            text = line.lstrip()[2:]
+            text = _esc(text)
+            text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+            out.append(f"<li>{text}</li>")
+        else:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            text = _esc(line)
+            text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+            out.append(f"<p>{text}</p>")
+    if in_list:
+        out.append("</ul>")
+    return "\n".join(out)
+
+
+def _section_ai_summary(summary_md):
+    if not summary_md:
+        return ""
+    body = _md_to_html(summary_md)
+    return f"""
+    <div class="ai-summary">
+      <div class="ai-summary-badge">AI 분석</div>
+      {body}
+    </div>
+    """
+
+
 def _load_prev_metrics():
     if not BUCKET:
         return None
@@ -670,6 +727,17 @@ def _css():
     .timeline-title {{ font-size:12px; color:var(--muted); text-transform:uppercase;
                       letter-spacing:.3px; font-weight:600; margin-bottom:6px; }}
     .timeline svg {{ width:100%; height:auto; }}
+    .ai-summary {{ background:#fff; border:1px solid var(--line); border-radius:6px;
+                  border-left:4px solid var(--accent); padding:16px 20px; margin:16px 0 24px; }}
+    .ai-summary-badge {{ display:inline-block; background:var(--ink); color:#fff;
+                        font-size:11px; font-weight:600; padding:2px 8px;
+                        border-radius:4px; margin-bottom:8px; letter-spacing:.5px; }}
+    .ai-summary h3 {{ margin:14px 0 6px; color:var(--ink); font-size:14px; }}
+    .ai-summary h4 {{ margin:10px 0 4px; color:var(--muted); font-size:13px; }}
+    .ai-summary p {{ margin:6px 0; color:var(--ink); font-size:14px; line-height:1.55; }}
+    .ai-summary ul {{ margin:6px 0 8px 0; padding-left:20px; }}
+    .ai-summary li {{ margin:4px 0; font-size:13.5px; line-height:1.5; }}
+    .ai-summary strong {{ color:var(--accent); }}
     .d-up {{ color:#B42318; font-size:13px; margin-left:6px; font-weight:500; }}
     .d-down {{ color:#067647; font-size:13px; margin-left:6px; font-weight:500; }}
     .d-zero {{ color:var(--muted); font-size:13px; margin-left:6px; }}
@@ -692,6 +760,7 @@ def _css():
 
 def handler(event, context):
     sections = event.get("sections") or []
+    summary_md = event.get("summary_md") or ""
     by_section = {s.get("section"): s for s in sections if isinstance(s, dict)}
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -700,7 +769,11 @@ def handler(event, context):
     history = _load_history_metrics(days=7)
     root = by_section.get("iam_hygiene", {}).get("root", {})
 
-    body_parts = [_section_summary(metrics, prev, history, root, by_section)]
+    body_parts = []
+    ai_block = _section_ai_summary(summary_md)
+    if ai_block:
+        body_parts.append(ai_block)
+    body_parts.append(_section_summary(metrics, prev, history, root, by_section))
     for s in sections:
         if not isinstance(s, dict):
             continue

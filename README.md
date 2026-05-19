@@ -12,8 +12,10 @@ Step Functions (STANDARD)
   │    ├─ ec2_rds         (EC2/RDS 인벤토리, 미사용 EBS·EIP)
   │    ├─ iam_hygiene     (루트 MFA/키, 사용자 MFA, 90일+ 미사용 키)
   │    ├─ cloudtrail_risk (루트 콘솔 로그인, SG 0.0.0.0/0, IAM 변경 등)
-  │    └─ s3_hygiene      (퍼블릭 차단/암호화 미설정 버킷)
-  ├─ Render               (HTML 생성)
+  │    ├─ s3_hygiene      (퍼블릭 차단/암호화 미설정 버킷)
+  │    └─ backup_status   (AWS Backup 작업/보호 리소스)
+  ├─ Summarize            (Bedrock Claude 요약 - HIGH 빈도 finding 자연어 분석)
+  ├─ Render               (HTML 생성, 상단에 AI 요약 삽입)
   └─ Publish              (S3 업로드 + presigned URL)
 ```
 
@@ -46,6 +48,11 @@ Step Functions (STANDARD)
 | cloudtrail_risk | cloudtrail:LookupEvents |
 | s3_hygiene | s3:ListAllMyBuckets, s3:GetBucketPublicAccessBlock, s3:GetEncryptionConfiguration |
 | publish | s3:PutObject (ReportsBucket 한정) |
+| summarize | bedrock:InvokeModel (Claude Sonnet 4 inference profile 한정) |
+
+> 첫 배포 전 **Bedrock 콘솔 → Model access**에서 `Claude Sonnet 4` 활성화 필요. 미활성 시 Summarize는 fallback(빈 요약)으로 graceful skip되어 보고서는 정상 생성됩니다.
+>
+> **비용**: Bedrock 1회 호출 약 $0.01~0.02 (입력 3K / 출력 1K 토큰 기준). 일 1회 자동 실행 → 월 약 $0.5.
 
 ## 사전 준비
 

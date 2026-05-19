@@ -138,6 +138,27 @@ Resources:
                 - s3:GetEncryptionConfiguration
               Resource: '*'
 
+  SummarizeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub daily-report-summarize-${Env}
+      CodeUri: src/functions/summarize/
+      Handler: app.handler
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          MODEL_ID: apac.anthropic.claude-sonnet-4-20250514-v1:0
+          MAX_TOKENS: '1500'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - !Sub arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0
+                - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0
+
   RenderFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -188,6 +209,7 @@ Resources:
         CloudTrailRiskArn: !GetAtt CloudTrailRiskFunction.Arn
         S3HygieneArn: !GetAtt S3HygieneFunction.Arn
         BackupStatusArn: !GetAtt BackupStatusFunction.Arn
+        SummarizeArn: !GetAtt SummarizeFunction.Arn
         RenderArn: !GetAtt RenderFunction.Arn
         PublishArn: !GetAtt PublishFunction.Arn
       Logging:
@@ -209,6 +231,8 @@ Resources:
             FunctionName: !Ref S3HygieneFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref BackupStatusFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SummarizeFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref RenderFunction
         - LambdaInvokePolicy:

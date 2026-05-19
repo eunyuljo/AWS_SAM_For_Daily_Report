@@ -182,6 +182,44 @@
           }
         }
       ],
+      "Next": "Summarize"
+    },
+    "Summarize": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${SummarizeArn}",
+        "Payload": {
+          "sections.$": "$.sections"
+        }
+      },
+      "ResultSelector": {
+        "summary_md.$": "$.Payload.summary_md",
+        "tokens.$": "$.Payload.tokens",
+        "model_id.$": "$.Payload.model_id"
+      },
+      "ResultPath": "$.summary",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.summaryError",
+          "Next": "SummarizeFailed"
+        }
+      ],
+      "Next": "Render"
+    },
+    "SummarizeFailed": {
+      "Type": "Pass",
+      "Result": {"summary_md": "", "tokens": {"input": 0, "output": 0}, "model_id": ""},
+      "ResultPath": "$.summary",
       "Next": "Render"
     },
     "Render": {
@@ -190,7 +228,8 @@
       "Parameters": {
         "FunctionName": "${RenderArn}",
         "Payload": {
-          "sections.$": "$.sections"
+          "sections.$": "$.sections",
+          "summary_md.$": "$.summary.summary_md"
         }
       },
       "ResultSelector": {
